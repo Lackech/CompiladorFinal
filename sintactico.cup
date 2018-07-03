@@ -1,0 +1,152 @@
+ 
+   
+
+package analizadorsyntax;
+
+/* Import the class java_cup.runtime.*  */
+import java_cup.runtime.*;
+import java.io.FileReader;
+   
+
+parser code {:
+
+
+    
+    /* Reporte de error encontrado. */
+    public void report_error(String message, Object info) {
+        StringBuilder m = new StringBuilder("Error");
+        if (info instanceof java_cup.runtime.Symbol) {
+            java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
+            if (s.left >= 0) {                
+                m.append(" in line "+(s.left+1));
+                if (s.right >= 0)
+                    m.append(", column "+(s.right+1));
+            }
+        }
+        m.append(" : "+message);
+        System.err.println(m);
+    }
+   
+    
+     public void report_fatal_error(String message, Object info) {
+        report_error(message, info);
+        System.exit(1);
+    } 
+
+    
+    public static void main(String[] args){
+        try {
+            AnalizadorSintactico asin = new AnalizadorSintactico(
+                    new AnalizadorLexico( new FileReader(args[0])));
+            Object result = asin.parse().value;
+            System.out.println("\n*** Termino con exito ***");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+:};
+   
+
+   
+/* ------------Declaracion de simbolos terminales y no terminales---------- */
+   
+/*Declaracion de variables Terminales*/
+terminal String funcion, id, simbolo_paren_inicio, simbolo_paren_fin, terminar, inicio_for, final_for, 
+	dec_contador, inc_contador, decla_numero, decla_bool, decla_hilera, comma, empty, simbolo_cuadrado_inicio,
+	simbolo_cuadrado_fin, simbolo_and, simbolo_or, simbolo_assign, simbolo_suma, simbolo_resta, simbolo_multi, simbolo_div,
+	true_tk, false_tk, print_tk, println_tk, mod, raiz, if_tk, else_tk, return_tk, while_tk, comp_igual, comp_difer, comp_menor_igual, comp_mayor_igual,
+	comp_menor, comp_mayor, error_tk,salto;
+terminal Integer numero;
+
+/*Declaracion de variables no terminales */
+non terminal PROGRAM, FUNCS, MAIN, FUN, PAR, PAR2, DECV, TYP, INS, LINEA, LINEA2,LLAMADO,PARLL, PARLL2,PARTYP, OPERACION, OP,ASIG,VALOR,
+				BOOLVAL,FOR,SECFOR, OPF, WHILE, CONDN, COMP, IF, ELSE, COND, CONDE, PRINT,WHITE,RET;
+
+
+
+/* Reglas gramaticas 
+
+FN ::= funcion:fn id:id{:System.out.println(fn+" "+ id+"\n"); :}
+        INS 
+        terminar;
+
+INS ::= DECV | ASSV;
+
+DECV ::= decla_numero id ;
+
+ASSV ::= id simbolo_assign numero ; */
+
+PROGRAM ::= FUNCS;
+
+FUNCS ::= FUN | FUNCS FUN | empty;
+
+FUN ::= funcion id simbolo_paren_inicio PAR simbolo_paren_fin /*WHITE*/
+		INS RET terminar |
+		funcion id simbolo_paren_inicio PAR simbolo_paren_fin WHITE
+		INS terminar;
+		
+PAR ::= DECV PAR2 | empty;
+
+PAR2 ::= comma DECV PAR2 | empty;
+
+DECV ::= TYP id;
+
+TYP ::= decla_bool | decla_hilera | decla_numero;
+
+INS ::= LINEA | empty;
+
+LINEA ::= LINEA LINEA2 | LINEA2;
+
+LINEA2 ::= DECV |
+			FOR |
+			WHILE |
+			IF |
+			ASIG |
+			LLAMADO;
+			
+LLAMADO ::= id simbolo_paren_inicio PARLL simbolo_paren_fin;
+
+PARLL ::= PARTYP PARLL2 | empty;
+
+PARLL2 ::= comma PARTYP PARLL2 | empty;
+
+PARTYP ::= numero | id | OPERACION;
+
+OPERACION ::= numero OP numero;
+
+OP ::= simbolo_div | simbolo_multi | simbolo_resta | simbolo_suma;
+
+ASIG ::= id simbolo_assign VALOR;
+
+VALOR ::= id | BOOLVAL | numero | LLAMADO | OPERACION;
+
+BOOLVAL ::= true_tk | false_tk;
+
+FOR ::= inicio_for decla_numero id simbolo_assign numero final_for SECFOR OPF numero WHITE
+		INS terminar;
+		
+SECFOR ::= id | numero | OPERACION;
+
+OPF ::= dec_contador | inc_contador;
+
+WHILE ::= while_tk CONDN WHITE INS terminar;
+
+CONDN ::= id COMP id | id COMP numero | numero COMP id | numero COMP numero;
+
+COMP ::= comp_difer | comp_igual | comp_mayor | comp_mayor_igual | comp_menor | comp_menor_igual;
+
+IF ::= if_tk COND WHITE INS terminar | 
+		if_tk COND WHITE INS terminar ELSE;
+		
+ELSE ::= else_tk WHITE INS terminar | else_tk IF;
+
+COND ::= CONDN CONDE;
+
+CONDE ::= simbolo_and CONDN CONDE | 
+			simbolo_or CONDN CONDE | empty;
+			
+PRINT ::= print_tk VALOR;
+
+WHITE ::= salto WHITE | salto;
+
+RET ::= return_tk VALOR;
